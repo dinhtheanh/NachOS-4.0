@@ -50,6 +50,18 @@
 
 #define MaxFileLength 32
 
+void IncreasePC()
+{
+	// set previous program counter to current programcounter
+	kernel->machine->WriteRegister(PrevPCReg, kernel->machine->ReadRegister(PCReg));
+
+	/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+
+	/* set next programm counter for brach execution */
+	kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg) + 4);
+}
+
 void
 ExceptionHandler(ExceptionType which)
 {	
@@ -113,30 +125,30 @@ ExceptionHandler(ExceptionType which)
 			kernel->machine->WriteRegister(2,-1);
 			delete filename;
 			{
-	  /* set previous programm counter (debugging only)*/
-	  kernel->machine->WriteRegister(PrevPCReg, kernel->machine->ReadRegister(PCReg));
+	  		/* set previous programm counter (debugging only)*/
+	  		kernel->machine->WriteRegister(PrevPCReg, kernel->machine->ReadRegister(PCReg));
 
-	  /* set programm counter to next instruction (all Instructions are 4 byte wide)*/
-	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	 		 kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
 	  
-	  /* set next programm counter for brach execution */
-	  kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
-	}
+	 		/* set next programm counter for brach execution */
+	 		kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+			}
 			return;
 			}
 			kernel->machine->WriteRegister(2,0); // trả về cho chương trình
 			// người dùng thành công
 			delete filename;
 			{
-	  /* set previous programm counter (debugging only)*/
-	  kernel->machine->WriteRegister(PrevPCReg, kernel->machine->ReadRegister(PCReg));
+	  		/* set previous programm counter (debugging only)*/
+	  		kernel->machine->WriteRegister(PrevPCReg, kernel->machine->ReadRegister(PCReg));
 
-	  /* set programm counter to next instruction (all Instructions are 4 byte wide)*/
-	  kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
+	  		/* set programm counter to next instruction (all Instructions are 4 byte wide)*/
+	  		kernel->machine->WriteRegister(PCReg, kernel->machine->ReadRegister(PCReg) + 4);
 	  
-	  /* set next programm counter for brach execution */
-	  kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
-	}
+	  		/* set next programm counter for brach execution */
+	  		kernel->machine->WriteRegister(NextPCReg, kernel->machine->ReadRegister(PCReg)+4);
+			}
 
 	
 			return;
@@ -172,80 +184,106 @@ ExceptionHandler(ExceptionType which)
 
 	break;
 
-      default:
-	cerr << "Unexpected system call " << type << "\n";
-	break;
-      }
-      break;
-    case SC_Open:
+	case SC_Open:
 	{
-		int bufAddr = machine->ReadRegister(4); 
-		int type = machine->ReadRegister(5);
-		char *buf;
+		int bufAddr = kernel->machine->ReadRegister(4); 
+		int ftype = kernel->machine->ReadRegister(5);
+		char *buf = User2System(bufAddr, MaxFileLength + 1);; 
+		// buf là filename
 
-		// if already opened 10 files
-		if (fileSystem->index > 10)
+			int OpenFileID = -1;
+				for (int i = 2;i < 20;i++)
+				{
+					if (kernel->fileSystem->openf[i] == NULL)
+					{
+						OpenFileID = i;
+						break;
+					}
+				}
+		if (OpenFileID != -1)
 		{
-			machine->WriteRegister(2, -1);
-			delete[] buf;
-			break;
-		}
+			// chỉ xử lý khi type = 0 or = 1
+			if (ftype == 0 or ftype == 1)
+			{
 				
-		// if open stdin or stdout, number of openfiles dont increase
-		buf = User2System(bufAddr, MaxFileLength + 1);
-		if (strcmp(buf, "stdin") == 0)
-		{
-			printf("Stdin mode\n");
-			machine->WriteRegister(2, 0);
+				// printf("%d \n", OpenFileID);
+				if (OpenFileID == -1)
+				{
+					printf("\n Cannot open file ");
+					DEBUG(dbgSys, "\n Can not open file ...");
+					kernel->machine->WriteRegister(2, -1);
+				}
+				else
+				{
+					kernel->fileSystem->openf[OpenFileID] = kernel->fileSystem->Open(buf, type);
+					DEBUG(dbgSys, "\n Open file Success ...");
+					//printf("\n Successfully open file ");
+					kernel->machine->WriteRegister(2, OpenFileID);
+				}
+			}	
+			else if (ftype == 2) // stdin
+			{
+				kernel->machine->WriteRegister(2,0);
+			}
+			else // stdout
+			{
+				kernel->machine->WriteRegister(2,1);
+			}
 			delete[] buf;
+			IncreasePC();
+			return;
 			break;
 		}
-		if (strcmp(buf, "stdout") == 0)
-		{
-			printf("Stdout mode\n");
-			machine->WriteRegister(2, 1);
-			delete[] buf;
-			break;
-		}
-
-		// if opening file succeed
-		// should not use OpenFile* temp to store = fileSystem->openfile[fileSystem->index]
-		// cause, i dont have a method to destroy this pointer correctly
-		if ((fileSystem->openfile[fileSystem->index] = fileSystem->Open(buf, type)) != NULL)
-		{
-
-			printf("\nOpen file success '%s'\n", buf);
-			machine->WriteRegister(2, fileSystem->index - 1);
-		}
-		else 
-		{
-			printf("Can not open file '%s'", buf);
-			machine->WriteRegister(2, -1);
-		}
+		kernel->machine->WriteRegister(2, -1);
 		delete[] buf;
+		IncreasePC();
+		return;
 		break;
-
 	}
+
 	case SC_Close:
 	{
-		int no = machine->ReadRegister(4);
-		int i = fileSystem->index;
+		int fID = kernel->machine->ReadRegister(4);	// Lay id cua file tu thanh ghi so 4
+		int index = kernel->fileSystem->index;
 
 		// opened [i] files, and want to close file No.[no] (no > i) --> go wrong
-		if (i < no)
+		if (fID > index)
 		{
 			printf("Close file failed \n");
-			machine->WriteRegister(2, -1);
+			kernel->machine->WriteRegister(2, -1);
+			IncreasePC();
+			return;
 			break;
+		} 
+		if (fID >= 0 && fID <= kernel->fileSystem->index) //Chi xu li khi fid nam trong [0, 20]
+		// va file phai co id nam trong cac id dang dc mo
+		{
+			if (kernel->fileSystem->openf[fID]) //neu mo file thanh cong
+			{
+				delete kernel->fileSystem->openf[fID]; //Xoa vung nho luu tru file
+				kernel->fileSystem->openf[fID] = NULL; //Gan vung nho NULL
+				kernel->machine->WriteRegister(2, 0);
+				printf("\n Successfully close file ");
+				IncreasePC();
+				return;
+				break;
+			}
 		}
-
-		fileSystem->openfile[no] == NULL;
-		delete fileSystem->openfile[no];
-		machine->WriteRegister(2, 0);
-		printf("Close file success\n");
+		printf("\n Cannot close file ");
+		kernel->machine->WriteRegister(2, -1);
+		IncreasePC();
+		return;
 		break;
-		}
-    default:
+	}
+    
+
+
+      	default:
+		cerr << "Unexpected system call " << type << "\n";
+		break;
+      	}
+      break;
+	default:
       cerr << "Unexpected user mode exception" << (int)which << "\n";
       break;
     }

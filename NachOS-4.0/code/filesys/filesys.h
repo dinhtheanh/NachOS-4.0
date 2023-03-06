@@ -42,7 +42,22 @@
 				// implementation is available
 class FileSystem {
   public:
-    FileSystem() {}
+	OpenFile** openf;
+	int index; //số file đang được mở, mặc định là mở 0 và 1 là stdin luồng vào
+	//và stdout luồng ra
+
+    FileSystem() {
+		openf = new OpenFile*[20];
+		index = 0;
+		for (int i = 0; i < 20; ++i)
+		{
+			openf[i] = NULL;
+		}
+		this->Create("stdin");
+		this->Create("stdout");
+		openf[index++] = this->Open("stdin", 2);
+		openf[index++] = this->Open("stdout", 3);
+	}
 
     bool Create(char *name) {
 	int fileDescriptor = OpenForWrite(name);
@@ -60,6 +75,16 @@ class FileSystem {
       }
 
     bool Remove(char *name) { return Unlink(name) == 0; }
+
+	//Hàm open này có thêm param type để mở file theo chế độ
+	OpenFile* Open(char *name, int type) {
+		int fileDescriptor = OpenForReadWrite(name, FALSE);
+
+		if (fileDescriptor == -1) return NULL;
+		//index++;
+		return new OpenFile(fileDescriptor, type);
+	}
+
 
 };
 

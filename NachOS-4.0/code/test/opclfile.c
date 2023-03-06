@@ -6,16 +6,8 @@ main()
     int len;
     char filename[maxlen + 1];
     /*Create a file*/
-    if (Open("text.txt") == -1)
-    {
-    // xuất thông báo lỗi tạo tập tin
-        //printf("Cannot create file!");
-    }
-    else
-    {
-    // xuất thông báo tạo tập tin thành công
-       // printf("Create file successfully");
-	Close("text.txt");
-    }
+    int OpenFileID = Open("text.txt", 0);
+    if (OpenFileID != -1)
+        Close(OpenFileID);
     Halt();
 } 

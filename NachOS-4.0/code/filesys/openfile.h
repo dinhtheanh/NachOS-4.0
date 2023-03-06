@@ -29,6 +29,17 @@
 					// See definitions listed under #else
 class OpenFile {
   public:
+	int type;
+	// type 0: read and write
+	// type 1: only read
+	// type 2: stdin
+	// type 3: stdout
+
+	// Constructor OpenFile để lấy vào thêm loại file (type)
+	OpenFile(int f, int t) {
+		file = f; currentOffset = 0;
+		type = t;
+	}
     OpenFile(int f) { file = f; currentOffset = 0; }	// open the file
     ~OpenFile() { Close(file); }			// close the file
 
@@ -57,6 +68,7 @@ class OpenFile {
   private:
     int file;
     int currentOffset;
+	
 };
 
 #else // FILESYS
