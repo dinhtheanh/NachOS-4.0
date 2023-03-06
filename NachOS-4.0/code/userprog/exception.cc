@@ -177,6 +177,74 @@ ExceptionHandler(ExceptionType which)
 	break;
       }
       break;
+    case SC_Open:
+	{
+		int bufAddr = machine->ReadRegister(4); 
+		int type = machine->ReadRegister(5);
+		char *buf;
+
+		// if already opened 10 files
+		if (fileSystem->index > 10)
+		{
+			machine->WriteRegister(2, -1);
+			delete[] buf;
+			break;
+		}
+				
+		// if open stdin or stdout, number of openfiles dont increase
+		buf = User2System(bufAddr, MaxFileLength + 1);
+		if (strcmp(buf, "stdin") == 0)
+		{
+			printf("Stdin mode\n");
+			machine->WriteRegister(2, 0);
+			delete[] buf;
+			break;
+		}
+		if (strcmp(buf, "stdout") == 0)
+		{
+			printf("Stdout mode\n");
+			machine->WriteRegister(2, 1);
+			delete[] buf;
+			break;
+		}
+
+		// if opening file succeed
+		// should not use OpenFile* temp to store = fileSystem->openfile[fileSystem->index]
+		// cause, i dont have a method to destroy this pointer correctly
+		if ((fileSystem->openfile[fileSystem->index] = fileSystem->Open(buf, type)) != NULL)
+		{
+
+			printf("\nOpen file success '%s'\n", buf);
+			machine->WriteRegister(2, fileSystem->index - 1);
+		}
+		else 
+		{
+			printf("Can not open file '%s'", buf);
+			machine->WriteRegister(2, -1);
+		}
+		delete[] buf;
+		break;
+
+	}
+	case SC_Close:
+	{
+		int no = machine->ReadRegister(4);
+		int i = fileSystem->index;
+
+		// opened [i] files, and want to close file No.[no] (no > i) --> go wrong
+		if (i < no)
+		{
+			printf("Close file failed \n");
+			machine->WriteRegister(2, -1);
+			break;
+		}
+
+		fileSystem->openfile[no] == NULL;
+		delete fileSystem->openfile[no];
+		machine->WriteRegister(2, 0);
+		printf("Close file success\n");
+		break;
+		}
     default:
       cerr << "Unexpected user mode exception" << (int)which << "\n";
       break;
