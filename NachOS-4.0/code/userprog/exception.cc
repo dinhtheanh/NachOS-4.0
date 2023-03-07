@@ -228,7 +228,7 @@ void ExceptionHandler(ExceptionType which)
 					delete kernel->fileSystem->openf[fID]; // Xoa vung nho luu tru file
 					kernel->fileSystem->openf[fID] = NULL; // Gan vung nho NULL
 					kernel->machine->WriteRegister(2, 0);
-					printf("\n Successfully close file ");
+					//printf("\n Successfully close file ");
 					IncreasePC();
 					return;
 					break;
