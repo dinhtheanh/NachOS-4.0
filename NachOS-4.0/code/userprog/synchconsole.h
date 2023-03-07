@@ -16,6 +16,7 @@
 #include "callback.h"
 #include "console.h"
 #include "synch.h"
+#include "kernel.h"
 
 // The following two classes define synchronized input and output to
 // a console device

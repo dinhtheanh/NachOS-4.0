@@ -36,6 +36,17 @@
 #define SC_ThreadJoin   15
 
 #define SC_Add		42
+#define SC_ReadChar 67
+#define SC_PrintString 68
+#define SC_ReadString 69
+#define SC_PrintChar 70
+#define SC_PrintInt 71
+
+#define SC_ReadNum 72
+#define SC_ReadInt 73
+
+#define SC_PrintNum 80
+
 
 #ifndef IN_ASM
 
@@ -107,8 +118,8 @@ typedef int OpenFileId;
  * the console device.
  */
 
-#define ConsoleInput	0  
-#define ConsoleOutput	1  
+//#define ConsoleInput	0  
+//#define ConsoleOutput	1  
  
 /* Create a Nachos file, with name "name" */
 /* Note: Create does not open the file.   */
@@ -174,7 +185,19 @@ int ThreadJoin(ThreadId id);
 /*
  * Deletes current thread and returns ExitCode to every waiting lokal thread.
  */
-void ThreadExit(int ExitCode);	
+void ThreadExit(int ExitCode);
+
+char ReadChar();
+
+int ReadInt();
+
+void ReadString(char* buffer, int length);
+
+void PrintString(char* buff);
+
+void PrintChar(char ch);
+
+void PrintInt(int i);
 
 #endif /* IN_ASM */
 
