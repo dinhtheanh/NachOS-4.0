@@ -242,6 +242,13 @@ PrintNum:
  	j $31 
  	.end PrintNum
 
+	.globl SocketTCP
+ 	.ent SocketTCP
+SocketTCP: 
+ 	addiu $2,$0,SC_SocketTCP
+ 	syscall 
+ 	j $31 
+ 	.end SocketTCP
 	
 /* dummy function to keep gcc happy */
         .globl  __main
