@@ -112,7 +112,7 @@ ifeq ($(hosttype),unknown)
 PROGRAMS = unknownhost
 else
 # change this if you create a new test program!
-PROGRAMS = add halt shell matmult sort segments createfile opclfile create
+PROGRAMS = add halt shell matmult sort segments createfile opclfile
 endif
 
 all: $(PROGRAMS)
@@ -168,12 +168,6 @@ opclfile.o: opclfile.c
 opclfile: opclfile.o start.o
 	$(LD) $(LDFLAGS) start.o opclfile.o -o opclfile.coff
 	$(COFF2NOFF) opclfile.coff opclfile
-
-create.o: create.c
-	$(CC) $(CFLAGS) -c create.c
-create: create.o start.o
-	$(LD) $(LDFLAGS) start.o create.o -o create.coff
-	$(COFF2NOFF) create.coff create
 
 clean:
 	$(RM) -f *.o *.ii
