@@ -112,7 +112,7 @@ ifeq ($(hosttype),unknown)
 PROGRAMS = unknownhost
 else
 # change this if you create a new test program!
-PROGRAMS = add halt shell matmult sort segments createfile opclfile
+PROGRAMS = add halt shell matmult sort segments createfile copy cat opensocket
 endif
 
 all: $(PROGRAMS)
@@ -161,13 +161,25 @@ createfile.o: createfile.c
 	$(CC) $(CFLAGS) -c createfile.c
 createfile: createfile.o start.o
 	$(LD) $(LDFLAGS) start.o createfile.o -o createfile.coff
-	$(COFF2NOFF) createfile.coff createfile 
+	$(COFF2NOFF) createfile.coff createfile
 
-opclfile.o: opclfile.c
-	$(CC) $(CFLAGS) -c opclfile.c
-opclfile: opclfile.o start.o
-	$(LD) $(LDFLAGS) start.o opclfile.o -o opclfile.coff
-	$(COFF2NOFF) opclfile.coff opclfile
+copy.o: copy.c
+	$(CC) $(CFLAGS) -c copy.c
+copy: copy.o start.o
+	$(LD) $(LDFLAGS) start.o copy.o -o copy.coff
+	$(COFF2NOFF) copy.coff copy
+
+opensocket.o: opensocket.c
+	$(CC) $(CFLAGS) -c opensocket.c
+opensocket: opensocket.o start.o
+	$(LD) $(LDFLAGS) start.o opensocket.o -o opensocket.coff
+	$(COFF2NOFF) opensocket.coff opensocket
+
+cat.o: cat.c
+	$(CC) $(CFLAGS) -c cat.c
+cat: cat.o start.o
+	$(LD) $(LDFLAGS) start.o cat.o -o cat.coff
+	$(COFF2NOFF) cat.coff cat
 
 clean:
 	$(RM) -f *.o *.ii

@@ -13,9 +13,12 @@ int main()
     {
         PrintString("Mo file thanh cong\n");
         // Write("Hello", 5, OpenFileID); // Lỗi không read xong write ngay được, chỉ read hoặc write được 1 lần duy nhất trong 1 ctrinh
-        byteRead = Read(buf, 5, OpenFileID);
+        byteRead = Read(buf, 32, OpenFileID);
         PrintInt(byteRead);
+        PrintString("\n");
+        PrintString("Noi dung file la: \n");
         PrintString(buf);
+        PrintString("\n");
         CloseStatus = Close(OpenFileID);
         if (CloseStatus == 0)
             PrintString("Dong file thanh cong\n");
