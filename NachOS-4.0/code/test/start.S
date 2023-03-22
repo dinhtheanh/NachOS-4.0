@@ -250,6 +250,30 @@ SocketTCP:
  	j $31 
  	.end SocketTCP
 	
+	.globl Connect
+ 	.ent Connect
+Connect: 
+ 	addiu $2,$0,SC_Connect
+ 	syscall 
+ 	j $31 
+ 	.end Connect
+
+	.globl Send
+ 	.ent Send
+Send: 
+ 	addiu $2,$0,SC_Send
+ 	syscall 
+ 	j $31 
+ 	.end Send
+
+	.globl Receive
+ 	.ent Receive
+Receive: 
+ 	addiu $2,$0,SC_Receive
+ 	syscall 
+ 	j $31 
+ 	.end Receive
+
 /* dummy function to keep gcc happy */
         .globl  __main
         .ent    __main
