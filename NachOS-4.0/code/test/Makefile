@@ -112,7 +112,7 @@ ifeq ($(hosttype),unknown)
 PROGRAMS = unknownhost
 else
 # change this if you create a new test program!
-PROGRAMS = add halt shell matmult sort segments createfile copy cat opensocket
+PROGRAMS = add halt shell matmult sort segments createfile copy cat echoclient filetransfer
 endif
 
 all: $(PROGRAMS)
@@ -169,17 +169,23 @@ copy: copy.o start.o
 	$(LD) $(LDFLAGS) start.o copy.o -o copy.coff
 	$(COFF2NOFF) copy.coff copy
 
-opensocket.o: opensocket.c
-	$(CC) $(CFLAGS) -c opensocket.c
-opensocket: opensocket.o start.o
-	$(LD) $(LDFLAGS) start.o opensocket.o -o opensocket.coff
-	$(COFF2NOFF) opensocket.coff opensocket
+echoclient.o: echoclient.c
+	$(CC) $(CFLAGS) -c echoclient.c
+echoclient: echoclient.o start.o
+	$(LD) $(LDFLAGS) start.o echoclient.o -o echoclient.coff
+	$(COFF2NOFF) echoclient.coff echoclient
 
 cat.o: cat.c
 	$(CC) $(CFLAGS) -c cat.c
 cat: cat.o start.o
 	$(LD) $(LDFLAGS) start.o cat.o -o cat.coff
 	$(COFF2NOFF) cat.coff cat
+
+filetransfer.o: filetransfer.c
+	$(CC) $(CFLAGS) -c filetransfer.c
+filetransfer: filetransfer.o start.o
+	$(LD) $(LDFLAGS) start.o filetransfer.o -o filetransfer.coff
+	$(COFF2NOFF) filetransfer.coff filetransfer
 
 clean:
 	$(RM) -f *.o *.ii
