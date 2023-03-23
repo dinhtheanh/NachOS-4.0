@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
+#include <sstream>
 using namespace std;
 
 // Process control: abort, exit, and sleep
@@ -66,7 +66,7 @@ void bzero(void *s, size_t n);
 // Interprocess communication operations, for simulating the network
 extern int OpenSocket();
 extern void CloseSocket(int sockID);
-extern void AssignNameToSocket(char *socketName, int sockID);
+extern void AssignNameToSocket(int, int, int);
 extern void DeAssignNameToSocket(char *socketName);
 extern bool PollSocket(int sockID);
 extern void ReadFromSocket(int sockID, char *buffer, int packetSize);

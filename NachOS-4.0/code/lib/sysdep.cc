@@ -431,7 +431,6 @@ int
 OpenSocket()
 {
     int sockID;
-    
     sockID = socket(AF_UNIX, SOCK_DGRAM, 0);
     ASSERT(sockID >= 0);
 
@@ -468,14 +467,24 @@ InitSocketName(struct sockaddr_un *uname, char *name)
 //----------------------------------------------------------------------
 
 void
-AssignNameToSocket(char *socketName, int sockID)
+AssignNameToSocket(int ip, int port, int sockID)
 {
     struct sockaddr_un uName;
     int retVal;
+    string socketName;
+    string sIP, sPort;
 
-    (void) unlink(socketName);    // in case it's still around from last time
+    stringstream s, ss;
+    s << ip;
+    s >> sIP;
+    ss << port;
+    ss >> sPort;
+    socketName = (sIP + '_') + sPort;
+    char realName[socketName.length()];
+    strcpy(realName, socketName.c_str());
+    (void) unlink(realName);    // in case it's still around from last time
 
-    InitSocketName(&uName, socketName);
+    InitSocketName(&uName, realName);
     retVal = bind(sockID, (struct sockaddr *) &uName, sizeof(uName));
     ASSERT(retVal >= 0);
     DEBUG(dbgNet, "Created socket " << socketName);
@@ -496,6 +505,18 @@ DeAssignNameToSocket(char *socketName)
 // 	Return TRUE if there are any messages waiting to arrive on the
 //	IPC port.
 //----------------------------------------------------------------------
+
+void
+ListenToSocket(int sockfd, int numofsock){
+    if (listen(sockfd, 5) == -1) 
+    {
+    perror("listen");
+    //exit(EXIT_FAILURE);
+    }
+}
+
+
+
 bool
 PollSocket(int sockID)
 {

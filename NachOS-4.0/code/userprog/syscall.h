@@ -47,6 +47,10 @@
 
 #define SC_PrintNum 80
 
+#define SC_SocketTCP 99
+#define SC_Connect 100
+#define SC_Send 101
+#define SC_Receive 102
 
 #ifndef IN_ASM
 
@@ -198,6 +202,17 @@ void PrintString(char* buff);
 void PrintChar(char ch);
 
 void PrintInt(int i);
+
+int SocketTCP();
+
+int Connect(int socketid, char *ip, int port);
+
+int Send(int socketid, char *buffer, int len);
+//int Read(char *buffer, int size, OpenFileId id);
+
+
+int Receive(int socketid, char *buffer, int len);
+//int Write(char *buffer, int size, OpenFileId id);
 
 #endif /* IN_ASM */
 

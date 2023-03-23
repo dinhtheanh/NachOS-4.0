@@ -40,23 +40,49 @@
 #ifdef FILESYS_STUB 		// Temporarily implement file system calls as 
 				// calls to UNIX, until the real file system
 				// implementation is available
+
 class FileSystem {
   public:
-	OpenFile** openf;
-	int index; //số file đang được mở, mặc định là mở 0 và 1 là stdin luồng vào
+	OpenFile** openf; //file descriptor for File
+	int index;
+	char** tableDescriptor;
+	//int indexS; 
+	//số file đang được mở, mặc định là mở 0 và 1 là stdin luồng vào
 	//và stdout luồng ra
 
     FileSystem() {
+		//S_Table = new TCP* [20];
+		
 		openf = new OpenFile*[20];
 		index = 0;
+		//indexS = 0;
 		for (int i = 0; i < 20; ++i)
 		{
+			//S_Table[i] = NULL;
 			openf[i] = NULL;
 		}
 		this->Create("stdin");
 		this->Create("stdout");
 		openf[index++] = this->Open("stdin", 2);
 		openf[index++] = this->Open("stdout", 3);
+		tableDescriptor = new char*[20];
+		for (int i = 0 ; i < 20 ; i ++){
+			tableDescriptor[i] = NULL;
+		}
+	}
+
+	~FileSystem()
+	{
+		for (int i = 0; i < 15; ++i)
+		{
+			if (openf[i] != NULL) delete openf[i];
+		}
+		delete[] openf;
+
+		for (int i = 0 ; i < 20 ; i ++){
+			if (tableDescriptor[i] != NULL) delete tableDescriptor[i];
+		}
+		delete[] tableDescriptor;
 	}
 
     bool Create(char *name) {
@@ -65,6 +91,10 @@ class FileSystem {
 	if (fileDescriptor == -1) return FALSE;
 	Close(fileDescriptor); 
 	return TRUE; 
+	}
+
+	OpenFile* Open(int SockID){
+		return new OpenFile(SockID, 0, 1);
 	}
 
     OpenFile* Open(char *name) {
@@ -82,15 +112,16 @@ class FileSystem {
 
 		if (fileDescriptor == -1) return NULL;
 		//index++;
-		return new OpenFile(fileDescriptor, type);
+		return new OpenFile(fileDescriptor, type, 0);
 	}
 
-
 };
+
 
 #else // FILESYS
 class FileSystem {
   public:
+    //int *S_Table;
     FileSystem(bool format);		// Initialize the file system.
 					// Must be called *after* "synchDisk" 
 					// has been initialized.
@@ -115,6 +146,8 @@ class FileSystem {
    OpenFile* directoryFile;		// "Root" directory -- list of 
 					// file names, represented as a file
 };
+
+
 
 #endif // FILESYS
 

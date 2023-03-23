@@ -28,7 +28,7 @@ NetworkInput::NetworkInput(CallBackObj *toCall)
     
     sock = OpenSocket();
     sprintf(sockName, "SOCKET_%d", kernel->hostName);
-    AssignNameToSocket(sockName, sock);		 // Bind socket to a filename 
+    AssignNameToSocket(kernel->hostName, 0, sock);		 // Bind socket to a filename 
 						 // in the current directory.
 
     // start polling for incoming packets

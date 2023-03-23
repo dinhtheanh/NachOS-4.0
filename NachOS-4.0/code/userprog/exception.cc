@@ -25,7 +25,7 @@
 #include "main.h"
 #include "syscall.h"
 #include "ksyscall.h"
-//#include "machine.h"
+// #include "machine.h"
 #include "synchconsole.h"
 
 //----------------------------------------------------------------------
@@ -153,15 +153,15 @@ void ExceptionHandler(ExceptionType which)
 			int bufAddr = kernel->machine->ReadRegister(4);
 			int ftype = kernel->machine->ReadRegister(5);
 			char *buf = User2System(bufAddr, MaxFileLength + 1);
-			;
+			int index = kernel->fileSystem->index;
 			// buf là filename
 
 			int OpenFileID = -1;
-			for (int i = 2; i < 20; i++)
+			for (index; index < 20; index++)
 			{
-				if (kernel->fileSystem->openf[i] == NULL)
+				if (kernel->fileSystem->openf[index] == NULL)
 				{
-					OpenFileID = i;
+					OpenFileID = index;
 					break;
 				}
 			}
@@ -170,21 +170,18 @@ void ExceptionHandler(ExceptionType which)
 				// chỉ xử lý khi type = 0 or = 1
 				if (ftype == 0 or ftype == 1)
 				{
-
-					// printf("%d \n", OpenFileID);
-					if (OpenFileID == -1)
+					kernel->fileSystem->openf[OpenFileID] = kernel->fileSystem->Open(buf, ftype);
+					DEBUG(dbgSys, "\n Open file Success ...");
+					// printf("\n Successfully open file ");
+					kernel->machine->WriteRegister(2, OpenFileID);
+					kernel->fileSystem->tableDescriptor[OpenFileID] = new char[strlen(buf) + 1];
+					for (int i = 0; i < strlen(buf); i++)
 					{
-						printf("\n Cannot open file ");
-						DEBUG(dbgSys, "\n Can not open file ...");
-						kernel->machine->WriteRegister(2, -1);
+						kernel->fileSystem->tableDescriptor[OpenFileID][i] = buf[i];
 					}
-					else
-					{
-						kernel->fileSystem->openf[OpenFileID] = kernel->fileSystem->Open(buf, type);
-						DEBUG(dbgSys, "\n Open file Success ...");
-						// printf("\n Successfully open file ");
-						kernel->machine->WriteRegister(2, OpenFileID);
-					}
+					kernel->fileSystem->tableDescriptor[OpenFileID][strlen(buf)] = '\0';
+					kernel->fileSystem->index++;
+					DEBUG(dbgSys, kernel->fileSystem->index);
 				}
 				else if (ftype == 2) // stdin
 				{
@@ -214,21 +211,28 @@ void ExceptionHandler(ExceptionType which)
 			// opened [i] files, and want to close file No.[no] (no > i) --> go wrong
 			if (fID > index)
 			{
-				printf("Close file failed \n");
+				// printf("Close file failed \n");
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
 				break;
 			}
-			if (fID >= 0 && fID <= kernel->fileSystem->index) // Chi xu li khi fid nam trong [0, 20]
+			else if (fID >= 0) // Chi xu li khi fid nam trong [0, 20]
 			// va file phai co id nam trong cac id dang dc mo
 			{
-				if (kernel->fileSystem->openf[fID]) // neu mo file thanh cong
+				if (kernel->fileSystem->openf[fID] != NULL) // neu mo file thanh cong
 				{
-					delete kernel->fileSystem->openf[fID]; // Xoa vung nho luu tru file
+					// Close(kernel->fileSystem->openf[fID])
+					delete kernel->fileSystem->openf[fID]; // Xoa vung nho luu tru file, auto chạy destructor close file
 					kernel->fileSystem->openf[fID] = NULL; // Gan vung nho NULL
+					kernel->fileSystem->index -= 1;
 					kernel->machine->WriteRegister(2, 0);
-					//printf("\n Successfully close file ");
+					// printf("\n Successfully close file ");
+					if (kernel->fileSystem->tableDescriptor[fID] != NULL)
+					{
+						delete kernel->fileSystem->tableDescriptor[fID];
+					}
+					kernel->fileSystem->tableDescriptor[fID] = NULL;
 					IncreasePC();
 					return;
 					break;
@@ -245,7 +249,7 @@ void ExceptionHandler(ExceptionType which)
 		{
 			int virtAddr = kernel->machine->ReadRegister(4);  // Lay dia chi cua tham so buffer tu thanh ghi so 4
 			int charcount = kernel->machine->ReadRegister(5); // Lay charcount tu thanh ghi so 5
-			int id = kernel->machine->ReadRegister(6);        // Lay id cua file tu thanh ghi so 6
+			int id = kernel->machine->ReadRegister(6);		  // Lay id cua file tu thanh ghi so 6
 			int OldPos;
 			int NewPos;
 			char *buf;
@@ -257,13 +261,16 @@ void ExceptionHandler(ExceptionType which)
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
+				break;
 			}
 
-			if (kernel->fileSystem->openf[id] == NULL){
+			if (kernel->fileSystem->openf[id] == NULL)
+			{
 				printf("\nKhong the read vao mot file khong ton tai.");
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
+				break;
 			}
 
 			if (kernel->fileSystem->openf[id]->type == 3) // Xet truong hop doc file stdout (type quy uoc la 3) thi tra ve -1
@@ -272,9 +279,10 @@ void ExceptionHandler(ExceptionType which)
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
+				break;
 			}
 			OldPos = kernel->fileSystem->openf[id]->GetCurrentPos(); // Kiem tra thanh cong thi lay vi tri OldPos
-			buf = User2System(virtAddr, charcount);                  // Copy chuoi tu vung nho User Space sang System Space voi bo dem buffer dai charcount
+			buf = User2System(virtAddr, charcount);					 // Copy chuoi tu vung nho User Space sang System Space voi bo dem buffer dai charcount
 			// Xet truong hop doc file stdin (type quy uoc la 2)
 			if (kernel->fileSystem->openf[id]->type == 2)
 			{
@@ -282,21 +290,22 @@ void ExceptionHandler(ExceptionType which)
 				int size = 0;
 				for (int i = 0; i < charcount; ++i)
 				{
-				size = size + 1;
-				buf[i] = kernel->synchConsoleIn->GetChar();
-				//Quy uoc chuoi ket thuc la \n
-				if (buf[i] == '\n')
-				{
-					buf[i + 1] = '\0';
-					break;
-				}
+					size = size + 1;
+					buf[i] = kernel->synchConsoleIn->GetChar();
+					// Quy uoc chuoi ket thuc la \n
+					if (buf[i] == '\n')
+					{
+						buf[i + 1] = '\0';
+						break;
+					}
 				}
 				buf[size] = '\0';
-				System2User(virtAddr, size, buf);        // Copy chuoi tu vung nho System Space sang User Space voi bo dem buffer co do dai la so byte thuc su
+				System2User(virtAddr, size, buf);		 // Copy chuoi tu vung nho System Space sang User Space voi bo dem buffer co do dai la so byte thuc su
 				kernel->machine->WriteRegister(2, size); // Tra ve so byte thuc su doc duoc
 				delete buf;
 				IncreasePC();
 				return;
+				break;
 			}
 			// Xet truong hop doc file binh thuong thi tra ve so byte thuc su
 			if ((kernel->fileSystem->openf[id]->Read(buf, charcount)) > 0)
@@ -310,12 +319,13 @@ void ExceptionHandler(ExceptionType which)
 			else
 			{
 				// Truong hop con lai la doc file co noi dung la NULL tra ve -2
-				//printf("\nDoc file rong.");
+				// printf("\nDoc file rong.");
 				kernel->machine->WriteRegister(2, -2);
 			}
 			delete buf;
 			IncreasePC();
 			return;
+			break;
 		}
 
 		case SC_Write:
@@ -331,6 +341,7 @@ void ExceptionHandler(ExceptionType which)
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
+				break;
 			}
 
 			if (kernel->fileSystem->openf[openf_id] == NULL)
@@ -339,6 +350,7 @@ void ExceptionHandler(ExceptionType which)
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
+				break;
 			}
 
 			// read-only file
@@ -348,6 +360,7 @@ void ExceptionHandler(ExceptionType which)
 				kernel->machine->WriteRegister(2, -1);
 				IncreasePC();
 				return;
+				break;
 			}
 
 			// write to console
@@ -367,6 +380,7 @@ void ExceptionHandler(ExceptionType which)
 				delete[] buf;
 				IncreasePC();
 				return;
+				break;
 			}
 
 			// write into file
@@ -379,10 +393,12 @@ void ExceptionHandler(ExceptionType which)
 				delete[] buf;
 				IncreasePC();
 				return;
+				break;
 			}
 
 			IncreasePC();
 			return;
+			break;
 		}
 
 		case SC_ReadChar:
@@ -415,12 +431,15 @@ void ExceptionHandler(ExceptionType which)
 				length++; // Dem do dai that cua chuoi
 			for (int i = 0; i < length; i++)
 			{
+				// if (buffer[i] == "\0")
+				// 	break;
 				kernel->synchConsoleOut->PutChar(buffer[i]);
 			}
 			delete buffer;
 			DEBUG(dbgSys, "\n SC_PrintString call ...");
 			IncreasePC();
 			return;
+			break;
 		}
 
 		case SC_PrintChar:
@@ -430,6 +449,7 @@ void ExceptionHandler(ExceptionType which)
 			kernel->synchConsoleOut->PutChar((char)ch);
 			IncreasePC();
 			return;
+			break;
 		}
 		case SC_ReadInt:
 		case SC_ReadNum:
@@ -438,6 +458,7 @@ void ExceptionHandler(ExceptionType which)
 			kernel->machine->WriteRegister(2, result);
 			IncreasePC();
 			return;
+			break;
 		}
 
 		case SC_PrintInt:
@@ -452,6 +473,7 @@ void ExceptionHandler(ExceptionType which)
 				kernel->synchConsoleOut->PutChar('0'); // In ra man hinh so 0
 				IncreasePC();
 				return;
+				break;
 			}
 
 			/*Qua trinh chuyen so thanh chuoi de in ra man hinh*/
@@ -493,6 +515,7 @@ void ExceptionHandler(ExceptionType which)
 				delete buffer;
 				IncreasePC();
 				return;
+				break;
 			}
 			buffer[numberOfNum] = 0;
 			for (int i = 0; i < numberOfNum; i++)
@@ -502,6 +525,7 @@ void ExceptionHandler(ExceptionType which)
 			delete buffer;
 			IncreasePC();
 			return;
+			break;
 		}
 		case SC_ReadString:
 		{
@@ -537,12 +561,261 @@ void ExceptionHandler(ExceptionType which)
 			return;
 			break;
 		}
+		case SC_SocketTCP:
+		{
+			// Not enough slot of file descriptors
+			if (kernel->fileSystem->index >= 19)
+			{
+				DEBUG(dbgSys, "\nNot enough slot");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+				break;
+			}
+			// Opening socket, if fail return -1
+			int SocketID = socket(AF_INET, SOCK_STREAM, 0);
+			if (SocketID == -1)
+			{
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+				break;
+			}
+
+			else
+			{
+				// Find free slot
+				int OpenFileID = -1;
+				for (int index = 0; index < 20; index++)
+				{
+					if (kernel->fileSystem->openf[index] == NULL)
+					{
+						OpenFileID = index;
+						break;
+					}
+				}
+				if (OpenFileID != -1) // Found free slot
+				{
+					kernel->fileSystem->openf[OpenFileID] = kernel->fileSystem->Open(SocketID);
+					kernel->fileSystem->index++;
+					DEBUG(dbgSys, "\n Socket opened, current index is: \n");
+					DEBUG(dbgSys, kernel->fileSystem->index);
+					kernel->machine->WriteRegister(2, OpenFileID);
+				}
+				else // Unable to find free slot
+				{
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+			}
+			IncreasePC();
+			return;
+			break;
+		}
+
+		case SC_Connect:
+		{
+			int index = kernel->machine->ReadRegister(4);
+			int serverFd = kernel->fileSystem->openf[index]->getfile();
+			int port = kernel->machine->ReadRegister(6);
+			int virtAddr = kernel->machine->ReadRegister(5);
+			char *ip = User2System(virtAddr, 32);
+			struct sockaddr_in server;
+			// cout << serverFd << endl;
+			if (serverFd < 0)
+			{
+				DEBUG(dbgSys, "\nInvalid Socket ID");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+				break;
+			}
+			server.sin_family = AF_INET;
+			server.sin_addr.s_addr = inet_addr(ip);
+			server.sin_port = htons(port);
+			int len = sizeof(server);
+			if (connect(serverFd, (struct sockaddr *)&server, len) < 0)
+			{
+				DEBUG(dbgSys, "\nCannot connect to server");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+				break;
+			}
+			DEBUG(dbgSys, "\nSuccessfully connect to server");
+			kernel->machine->WriteRegister(2, 0);
+			IncreasePC();
+			return;
+			break;
+		}
+
+		case SC_Seek:
+		{
+			// input vi tri(int), id cua file (openfileid)
+			//  output: -1 : loi, vi tri thuc su:thanh cong
+			// cong dung: di chuyen con tro den vi tri can thiet trong file
+			int pos = kernel->machine->ReadRegister(4);
+			int id = kernel->machine->ReadRegister(5);
+
+			// kiem tra id
+			if (id < 0 || id > 19)
+			{
+				// printf("\n Khong the seek vi id nam ngoai bang mo ta file"
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+			}
+			// kiem tra ton tai file
+			if (kernel->fileSystem->openf[id] == NULL)
+			{
+				// printf("\n khong the seek vi file khong ton tai");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+			}
+			// kiem tra co goi seek tren console khong
+			if (id == 0 || id == 1)
+			{
+				// printf("\nkhong the seek tren file console");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+			}
+			pos = (pos == -1) ? kernel->fileSystem->openf[id]->Length() : pos;
+			if (pos > kernel->fileSystem->openf[id]->Length() || pos < 0)
+			{
+				// printf("\n Khong the seek file den vi tri nay");
+				kernel->machine->WriteRegister(2, -1);
+			}
+			else
+			{
+				kernel->fileSystem->openf[id]->Seek(pos);
+				kernel->machine->WriteRegister(2, pos);
+			}
+			IncreasePC();
+			return;
+		}
+		case SC_Remove:
+		{
+			DEBUG(dbgSys, "\n SC_Remove calling ...");
+			int virtAddr = kernel->machine->ReadRegister(4); // Lay dia chi cua tham so name tu thanh ghi so 4
+			char *filename;
+			filename = User2System(virtAddr, MaxFileLength); // Copy chuoi tu vung nho User Space sang System Space voi bo dem name dai MaxFileLength
+
+			for (int i = 3; i < 20; i++)
+			{
+
+				if (kernel->fileSystem->tableDescriptor[i] != NULL && strcmp(filename, kernel->fileSystem->tableDescriptor[i]) == 0)
+				{
+					DEBUG(dbgSys, "\n cannot remove file (file is openning) ...");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+				}
+			}
+
+			if (kernel->fileSystem->Remove(filename))
+			{
+				DEBUG(dbgSys, "\n Remove file success...");
+				kernel->machine->WriteRegister(2, 0);
+			}
+			else
+			{
+				DEBUG(dbgSys, "\n Can not found file ...");
+				kernel->machine->WriteRegister(2, -1);
+			}
+			IncreasePC();
+			return;
+			break;
+		}
+
+		// int Send(int socketid, char *buffer, int len)
+		case SC_Send:
+		{
+			// reading arguments from user
+			int index = kernel->machine->ReadRegister(4);
+			int sockID = kernel->fileSystem->openf[index]->getfile();
+			int virtAddr = kernel->machine->ReadRegister(5);
+			int len = kernel->machine->ReadRegister(6);
+
+			//
+			char *buffer = User2System(virtAddr, len);
+
+			int result = send(sockID, buffer, len, 0);
+
+			perror("\nState");
+			// cout << retval << endl;
+			// cout << error << endl;
+			if (errno == 32)
+			{
+				DEBUG(dbgSys, "\nNo connection detected!");
+				kernel->machine->WriteRegister(2, 0);
+				IncreasePC();
+				return;
+				break;
+			}
+			// cout << error << endl;
+
+			if (result < 0)
+			{
+				// cout << errno << endl;
+				DEBUG(dbgSys, "\nCannot send");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+				break;
+			}
+			DEBUG(dbgSys, "\nSuccessfully sent");
+			kernel->machine->WriteRegister(2, result);
+			IncreasePC();
+			return;
+			break;
+		}
+		// int Receive(int socketid, char *buffer, int len)
+		case SC_Receive:
+		{
+			int index = kernel->machine->ReadRegister(4);
+			int sockID = kernel->fileSystem->openf[index]->getfile();
+			int virtAddr = kernel->machine->ReadRegister(5);
+			int len = kernel->machine->ReadRegister(6);
+			char buffer[len];
+
+			int result = recv(sockID, buffer, len, 0);
+			if (result < 0)
+			{
+
+				cout << errno << endl;
+				perror("State:");
+				if (errno == 107)
+				{
+					DEBUG(dbgSys, "\nNo connection detected!");
+					kernel->machine->WriteRegister(2, 0);
+					IncreasePC();
+					return;
+					break;
+				}
+				DEBUG(dbgSys, "\nCannot receive");
+				kernel->machine->WriteRegister(2, -1);
+				IncreasePC();
+				return;
+				break;
+			}
+			DEBUG(dbgSys, "\nSuccessfully received");
+			System2User(virtAddr, len, buffer);
+			kernel->machine->WriteRegister(2, result);
+			IncreasePC();
+			return;
+			break;
+		}
 
 		default:
 			cerr << "Unexpected system call " << type << "\n";
 			break;
 		}
 		break;
+
 	default:
 		cerr << "Unexpected user mode exception" << (int)which << "\n";
 		break;

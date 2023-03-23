@@ -18,6 +18,9 @@
 #include "alarm.h"
 #include "filesys.h"
 #include "machine.h"
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <errno.h>
 
 class PostOfficeInput;
 class PostOfficeOutput;
