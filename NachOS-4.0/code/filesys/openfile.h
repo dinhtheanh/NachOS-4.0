@@ -60,10 +60,10 @@ public:
 	// type 3: stdout
 
 	// Constructor OpenFile để lấy vào thêm loại file (type)
-	OpenFile(int f, int t, int typeFD)
+	OpenFile(int f, int t, int typeFDin)
 	{
 		file = f;
-		if (typeFD = 0)
+		if (typeFDin == 0)
 		{
 			type = t;
 			currentOffset = 0;
@@ -73,7 +73,7 @@ public:
 			type = -1;
 			currentOffset = -1;
 		}
-		IDType = typeFD;
+		IDType = typeFDin;
 	}
 	OpenFile(int f)
 	{

@@ -129,6 +129,7 @@ void ExceptionHandler(ExceptionType which)
 			break;
 		}
 		case SC_Add:
+		{
 			DEBUG(dbgSys, "Add " << kernel->machine->ReadRegister(4) << " + " << kernel->machine->ReadRegister(5) << "\n");
 
 			/* Process SysAdd Systemcall*/
@@ -147,6 +148,7 @@ void ExceptionHandler(ExceptionType which)
 			ASSERTNOTREACHED();
 
 			break;
+		}
 
 		case SC_Open:
 		{
@@ -244,163 +246,241 @@ void ExceptionHandler(ExceptionType which)
 			return;
 			break;
 		}
-
+		// int Receive(int socketid, char *buffer, int len)
+		// int Read(char *buffer, int size, OpenFileId id);
 		case SC_Read:
 		{
-			int virtAddr = kernel->machine->ReadRegister(4);  // Lay dia chi cua tham so buffer tu thanh ghi so 4
-			int charcount = kernel->machine->ReadRegister(5); // Lay charcount tu thanh ghi so 5
-			int id = kernel->machine->ReadRegister(6);		  // Lay id cua file tu thanh ghi so 6
-			int OldPos;
-			int NewPos;
-			char *buf;
+			int virtAddr = kernel->machine->ReadRegister(4); // Lay dia chi cua tham so buffer tu thanh ghi so 4
+			int len = kernel->machine->ReadRegister(5);		 // Lay charcount tu thanh ghi so 5
+			int id = kernel->machine->ReadRegister(6);		 // Lay id cua file tu thanh ghi so 6
 			int index = kernel->fileSystem->index;
 
-			if (id > index || id < 0 || id == 0)
+			if (kernel->fileSystem->openf[id]->getIDType() == 0)
 			{
-				printf("\nKhong the read vi id nam ngoai bang mo ta file.");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
-			}
+				int OldPos;
+				int NewPos;
+				char *buf;
 
-			if (kernel->fileSystem->openf[id] == NULL)
-			{
-				printf("\nKhong the read vao mot file khong ton tai.");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
-			}
-
-			if (kernel->fileSystem->openf[id]->type == 3) // Xet truong hop doc file stdout (type quy uoc la 3) thi tra ve -1
-			{
-				printf("\nKhong the read file stdout.");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
-			}
-			OldPos = kernel->fileSystem->openf[id]->GetCurrentPos(); // Kiem tra thanh cong thi lay vi tri OldPos
-			buf = User2System(virtAddr, charcount);					 // Copy chuoi tu vung nho User Space sang System Space voi bo dem buffer dai charcount
-			// Xet truong hop doc file stdin (type quy uoc la 2)
-			if (kernel->fileSystem->openf[id]->type == 2)
-			{
-				// Su dung ham Read cua lop SynchConsole de tra ve so byte thuc su doc duoc
-				int size = 0;
-				for (int i = 0; i < charcount; ++i)
+				if (id > index || id < 0 || id == 0)
 				{
-					size = size + 1;
-					buf[i] = kernel->synchConsoleIn->GetChar();
-					// Quy uoc chuoi ket thuc la \n
-					if (buf[i] == '\n')
-					{
-						buf[i + 1] = '\0';
-						break;
-					}
+					printf("\nKhong the read vi id nam ngoai bang mo ta file.");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
 				}
-				buf[size] = '\0';
-				System2User(virtAddr, size, buf);		 // Copy chuoi tu vung nho System Space sang User Space voi bo dem buffer co do dai la so byte thuc su
-				kernel->machine->WriteRegister(2, size); // Tra ve so byte thuc su doc duoc
+
+				if (kernel->fileSystem->openf[id] == NULL)
+				{
+					printf("\nKhong the read vao mot file khong ton tai.");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+
+				if (kernel->fileSystem->openf[id]->type == 3) // Xet truong hop doc file stdout (type quy uoc la 3) thi tra ve -1
+				{
+					printf("\nKhong the read file stdout.");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+				OldPos = kernel->fileSystem->openf[id]->GetCurrentPos(); // Kiem tra thanh cong thi lay vi tri OldPos
+				buf = User2System(virtAddr, len);						 // Copy chuoi tu vung nho User Space sang System Space voi bo dem buffer dai charcount
+				// Xet truong hop doc file stdin (type quy uoc la 2)
+				if (kernel->fileSystem->openf[id]->type == 2)
+				{
+					// Su dung ham Read cua lop SynchConsole de tra ve so byte thuc su doc duoc
+					int size = 0;
+					for (int i = 0; i < len; ++i)
+					{
+						size = size + 1;
+						buf[i] = kernel->synchConsoleIn->GetChar();
+						// Quy uoc chuoi ket thuc la \n
+						if (buf[i] == '\n')
+						{
+							buf[i + 1] = '\0';
+							break;
+						}
+					}
+					buf[size] = '\0';
+					System2User(virtAddr, size, buf);		 // Copy chuoi tu vung nho System Space sang User Space voi bo dem buffer co do dai la so byte thuc su
+					kernel->machine->WriteRegister(2, size); // Tra ve so byte thuc su doc duoc
+					delete buf;
+					IncreasePC();
+					return;
+					break;
+				}
+				// Xet truong hop doc file binh thuong thi tra ve so byte thuc su
+				if ((kernel->fileSystem->openf[id]->Read(buf, len)) > 0)
+				{
+					// So byte thuc su = NewPos - OldPos
+					NewPos = kernel->fileSystem->openf[id]->GetCurrentPos();
+					// Copy chuoi tu vung nho System Space sang User Space voi bo dem buffer co do dai la so byte thuc su
+					System2User(virtAddr, NewPos - OldPos, buf);
+					kernel->machine->WriteRegister(2, NewPos - OldPos);
+				}
+				else
+				{
+					// Truong hop con lai la doc file co noi dung la NULL tra ve -2
+					// printf("\nDoc file rong.");
+					kernel->machine->WriteRegister(2, -2);
+				}
 				delete buf;
 				IncreasePC();
 				return;
 				break;
 			}
-			// Xet truong hop doc file binh thuong thi tra ve so byte thuc su
-			if ((kernel->fileSystem->openf[id]->Read(buf, charcount)) > 0)
+			else if (kernel->fileSystem->openf[id]->getIDType() == 1)
 			{
-				// So byte thuc su = NewPos - OldPos
-				NewPos = kernel->fileSystem->openf[id]->GetCurrentPos();
-				// Copy chuoi tu vung nho System Space sang User Space voi bo dem buffer co do dai la so byte thuc su
-				System2User(virtAddr, NewPos - OldPos, buf);
-				kernel->machine->WriteRegister(2, NewPos - OldPos);
+				int sockID = kernel->fileSystem->openf[id]->getfile();
+				char buffer[len];
+
+				int result = recv(sockID, buffer, len, 0);
+				if (result < 0)
+				{
+
+					// cout << errno << endl;
+					// perror("State:");
+					if (errno == 107)
+					{
+						DEBUG(dbgSys, "\nNo connection detected!");
+						kernel->machine->WriteRegister(2, 0);
+						IncreasePC();
+						return;
+						break;
+					}
+					DEBUG(dbgSys, "\nCannot receive");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+				DEBUG(dbgSys, "\nSuccessfully received");
+				System2User(virtAddr, len, buffer);
+				kernel->machine->WriteRegister(2, result);
+				IncreasePC();
+				return;
+				break;
 			}
-			else
-			{
-				// Truong hop con lai la doc file co noi dung la NULL tra ve -2
-				// printf("\nDoc file rong.");
-				kernel->machine->WriteRegister(2, -2);
-			}
-			delete buf;
-			IncreasePC();
-			return;
-			break;
 		}
 
+		// int Write(char *buffer, int size, OpenFileId id);
+		//  int Send(int socketid, char *buffer, int len);
 		case SC_Write:
 		{
 			int virtAddr = kernel->machine->ReadRegister(4);
-			int charcount = kernel->machine->ReadRegister(5);
+			int len = kernel->machine->ReadRegister(5);
 			int openf_id = kernel->machine->ReadRegister(6);
 			int index = kernel->fileSystem->index;
-
-			if (openf_id > index || openf_id < 0 || openf_id == 0)
+			if (kernel->fileSystem->openf[openf_id]->getIDType() == 0)
 			{
-				printf("\nKhong the write vi id nam ngoai bang mo ta file.");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
-			}
-
-			if (kernel->fileSystem->openf[openf_id] == NULL)
-			{
-				printf("\nKhong the write vi file nay khong ton tai.");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
-			}
-
-			// read-only file
-			if (kernel->fileSystem->openf[openf_id]->type == 1)
-			{
-				printf("\nKhong the write file stdin hoac file only read.");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
-			}
-
-			// write to console
-			char *buf = User2System(virtAddr, charcount);
-			if (openf_id == 1)
-			{
-				int i = 0;
-				while (buf[i] != '\0' && buf[i] != '\n')
+				// cout << "Type file" << endl;
+				if (openf_id > index || openf_id < 0 || openf_id == 0)
 				{
-					kernel->synchConsoleOut->PutChar(buf[i]);
-					i++;
+					printf("\nKhong the write vi id nam ngoai bang mo ta file.");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
 				}
-				buf[i] = '\n';
-				kernel->synchConsoleOut->PutChar(buf[i]); // write last character
 
-				kernel->machine->WriteRegister(2, i - 1);
-				delete[] buf;
+				if (kernel->fileSystem->openf[openf_id] == NULL)
+				{
+					printf("\nKhong the write vi file nay khong ton tai.");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+
+				// read-only file
+				if (kernel->fileSystem->openf[openf_id]->type == 1)
+				{
+					printf("\nKhong the write file stdin hoac file only read.");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+
+				// write to console
+				char *buf = User2System(virtAddr, len);
+				if (openf_id == 1)
+				{
+					int i = 0;
+					while (buf[i] != '\0' && buf[i] != '\n')
+					{
+						kernel->synchConsoleOut->PutChar(buf[i]);
+						i++;
+					}
+					buf[i] = '\n';
+					kernel->synchConsoleOut->PutChar(buf[i]); // write last character
+
+					kernel->machine->WriteRegister(2, i - 1);
+					delete[] buf;
+					IncreasePC();
+					return;
+					break;
+				}
+
+				// write into file
+				int before = kernel->fileSystem->openf[openf_id]->GetCurrentPos();
+				// cout << "Current: " << before << endl;
+				if ((kernel->fileSystem->openf[openf_id]->Write(buf, len)) != 0)
+				{
+					int after = kernel->fileSystem->openf[openf_id]->GetCurrentPos();
+					// cout << "Current: " << after << endl;
+					System2User(virtAddr, after - before, buf);
+					kernel->machine->WriteRegister(2, after - before + 1);
+					delete[] buf;
+					IncreasePC();
+					return;
+					break;
+				}
+
 				IncreasePC();
 				return;
 				break;
 			}
-
-			// write into file
-			int before = kernel->fileSystem->openf[openf_id]->GetCurrentPos();
-			cout << "Current: " << before << endl;
-			if ((kernel->fileSystem->openf[openf_id]->Write(buf, charcount)) != 0)
+			else if (kernel->fileSystem->openf[openf_id]->getIDType() == 1)
 			{
-				int after = kernel->fileSystem->openf[openf_id]->GetCurrentPos();
-				cout << "Current: " << after << endl;
-				System2User(virtAddr, after - before, buf);
-				kernel->machine->WriteRegister(2, after - before + 1);
-				delete[] buf;
+				cout << "sockettype" << endl;
+				int sockID = kernel->fileSystem->openf[openf_id]->getfile();
+				char *buffer = User2System(virtAddr, len);
+
+				int result = send(sockID, buffer, len, 0);
+
+				// perror("\nState");
+				//  cout << retval << endl;
+				//  cout << error << endl;
+				if (errno == 32)
+				{
+					DEBUG(dbgSys, "\nNo connection detected!");
+					kernel->machine->WriteRegister(2, 0);
+					IncreasePC();
+					return;
+					break;
+				}
+				// cout << error << endl;
+
+				if (result < 0)
+				{
+					// cout << errno << endl;
+					DEBUG(dbgSys, "\nCannot send");
+					kernel->machine->WriteRegister(2, -1);
+					IncreasePC();
+					return;
+					break;
+				}
+				DEBUG(dbgSys, "\nSuccessfully sent");
+				kernel->machine->WriteRegister(2, result);
 				IncreasePC();
 				return;
 				break;
 			}
-
-			IncreasePC();
-			return;
-			break;
 		}
 
 		case SC_ReadChar:
@@ -601,6 +681,7 @@ void ExceptionHandler(ExceptionType which)
 					kernel->fileSystem->openf[OpenFileID] = kernel->fileSystem->Open(SocketID);
 					kernel->fileSystem->index++;
 					DEBUG(dbgSys, "\n Socket opened, current index is: \n");
+					// cout << kernel->fileSystem->openf[OpenFileID]->getIDType() << endl;
 					DEBUG(dbgSys, kernel->fileSystem->index);
 					kernel->machine->WriteRegister(2, OpenFileID);
 				}
@@ -747,9 +828,9 @@ void ExceptionHandler(ExceptionType which)
 
 			int result = send(sockID, buffer, len, 0);
 
-			perror("\nState");
-			// cout << retval << endl;
-			// cout << error << endl;
+			// perror("\nState");
+			//  cout << retval << endl;
+			//  cout << error << endl;
 			if (errno == 32)
 			{
 				DEBUG(dbgSys, "\nNo connection detected!");
@@ -778,37 +859,51 @@ void ExceptionHandler(ExceptionType which)
 		// int Receive(int socketid, char *buffer, int len)
 		case SC_Receive:
 		{
-			int index = kernel->machine->ReadRegister(4);
-			int sockID = kernel->fileSystem->openf[index]->getfile();
-			int virtAddr = kernel->machine->ReadRegister(5);
-			int len = kernel->machine->ReadRegister(6);
-			char buffer[len];
+			int sockID;
+			int virtAddr;
+			int len;
+			int result;
+			sockID = kernel->fileSystem->openf[kernel->machine->ReadRegister(4)]->getfile();
+			virtAddr = kernel->machine->ReadRegister(5);
+			len = kernel->machine->ReadRegister(6);
+			char buf[len];
 
-			int result = recv(sockID, buffer, len, 0);
+			result = recv(sockID, buf, len, 0);
+
+			// cout << buf << endl;
 			if (result < 0)
 			{
 
-				cout << errno << endl;
-				perror("State:");
+				// cout << "hello" << endl;
+				// perror("State:");
 				if (errno == 107)
 				{
+					// cout << "hello" << endl;
 					DEBUG(dbgSys, "\nNo connection detected!");
 					kernel->machine->WriteRegister(2, 0);
-					IncreasePC();
-					return;
-					break;
+					// IncreasePC();
+					// return;
+					// break;
 				}
-				DEBUG(dbgSys, "\nCannot receive");
-				kernel->machine->WriteRegister(2, -1);
-				IncreasePC();
-				return;
-				break;
+				else
+				{
+					cout << "hello" << endl;
+					DEBUG(dbgSys, "\nCannot receive");
+					kernel->machine->WriteRegister(2, -1);
+				}
 			}
-			DEBUG(dbgSys, "\nSuccessfully received");
-			System2User(virtAddr, len, buffer);
-			kernel->machine->WriteRegister(2, result);
+			else
+			{
+
+				DEBUG(dbgSys, "\nSuccessfully received");
+				System2User(virtAddr, len, buf);
+				kernel->machine->WriteRegister(2, result);
+			}
+
 			IncreasePC();
+
 			return;
+
 			break;
 		}
 

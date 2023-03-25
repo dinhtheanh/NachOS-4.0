@@ -31,8 +31,12 @@ int main()
     state = Connect(id, server_ip, port);
     if (state != -1)
     {
-        byteSent = Send(id, msg, sizeof(msg));
-        byteRead = Receive(id, recvmsg, byteSent);
+        //int Write(char *buffer, int size, OpenFileId id);
+
+        //int Read(char *buffer, int size, OpenFileId id);
+
+        byteSent = Write(msg, sizeof(msg), id);//Send(id, msg, sizeof(msg));
+        byteRead = Read(recvmsg, byteSent, id);//Receive(id, recvmsg, byteSent);
 
         PrintString(recvmsg);
         PrintString("\n");
@@ -43,8 +47,8 @@ int main()
     state2 = Connect(id2, server_ip, port);
     if (state2 != -1)
     {
-        byteSent = Send(id2, msg2, sizeof(msg2));
-        byteRead = Receive(id2, recvmsg2, byteSent);
+        byteSent = Write(msg2, sizeof(msg2), id2);
+        byteRead = Read(recvmsg2, byteSent, id2);
 
         PrintString(recvmsg2);
         PrintString("\n");
@@ -55,8 +59,8 @@ int main()
     state3 = Connect(id3, server_ip, port);
     if (state3 != -1)
     {
-        byteSent = Send(id3, msg3, sizeof(msg3));
-        byteRead = Receive(id3, recvmsg3, byteSent);
+        byteSent = Write(msg3, sizeof(msg3), id3);
+        byteRead = Read(recvmsg3, byteSent, id3);
 
         PrintString(recvmsg3);
         PrintString("\n");
@@ -67,8 +71,8 @@ int main()
     state4 = Connect(id4, server_ip, port);
     if (state4 != -1)
     {
-        byteSent = Send(id4, msg4, sizeof(msg4));
-        byteRead = Receive(id4, recvmsg4, byteSent);
+        byteSent = Write(msg4, sizeof(msg4), id4);
+        byteRead = Read(recvmsg4, byteSent, id4);
 
         PrintString(recvmsg4);
         PrintString("\n");

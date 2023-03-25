@@ -2,16 +2,16 @@
 
 int main()
 {
-    char bufferRecv[5];
-    char bufferRead[5];
+    char bufferRecv[32];
+    char bufferRead[32];
     char filename[32];
     char filename2[32];
     char *ip = "127.0.0.1";
     int port = 1234;
-    int fileID, byteReadFile, byteSend, byteRecv, socketID, state;
-    int i = 0;
+    int fileID, byteReadFile, byteSend, byteRecv, socketID, state = -1;
+    int i;
 
-    // for (i; i < 1024; i++){
+    // for (i = 0; i < 1024; i++){
     //     bufferRecv[i] = 0;
     //     bufferRead[i] = 0;
     // }
@@ -20,19 +20,22 @@ int main()
     PrintString("Please input the file you want to read: \n");
     ReadString(filename, 32);
     fileID = Open(filename, 0);
-    byteReadFile = Read(bufferRead, 5, fileID);
+    byteReadFile = Read(bufferRead, 32, fileID);
+    bufferRead[byteReadFile] = '\0';
     state = Connect(socketID, ip, port);
     if (state != -1){
         byteSend = Send(socketID, bufferRead, byteReadFile);
+        //PrintInt(byteSend);
         byteRecv =  Receive(socketID, bufferRecv, byteSend);
+        //PrintInt(state);
         Close(socketID);
     }
     Close(fileID);
-    PrintString(bufferRead);
-    PrintString("Please input the file you want to read: \n");
+    //PrintString(bufferRead);
+    PrintString("Please input the file you want to write: \n");
     ReadString(filename2, 32);
     fileID = Open(filename2, 0);
-    PrintString(bufferRecv);
+    //PrintString(bufferRecv);
     Write(bufferRecv, byteRecv, fileID);
     Close(fileID);
 
