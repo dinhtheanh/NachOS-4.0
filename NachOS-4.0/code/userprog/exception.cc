@@ -385,9 +385,11 @@ void ExceptionHandler(ExceptionType which)
 
 			// write into file
 			int before = kernel->fileSystem->openf[openf_id]->GetCurrentPos();
+			cout << "Current: " << before << endl;
 			if ((kernel->fileSystem->openf[openf_id]->Write(buf, charcount)) != 0)
 			{
 				int after = kernel->fileSystem->openf[openf_id]->GetCurrentPos();
+				cout << "Current: " << after << endl;
 				System2User(virtAddr, after - before, buf);
 				kernel->machine->WriteRegister(2, after - before + 1);
 				delete[] buf;
@@ -704,7 +706,7 @@ void ExceptionHandler(ExceptionType which)
 			char *filename;
 			filename = User2System(virtAddr, MaxFileLength); // Copy chuoi tu vung nho User Space sang System Space voi bo dem name dai MaxFileLength
 
-			for (int i = 3; i < 20; i++)
+			for (int i = 2; i < 20; i++)
 			{
 
 				if (kernel->fileSystem->tableDescriptor[i] != NULL && strcmp(filename, kernel->fileSystem->tableDescriptor[i]) == 0)
