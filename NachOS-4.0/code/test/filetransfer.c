@@ -24,9 +24,11 @@ int main()
     bufferRead[byteReadFile] = '\0';
     state = Connect(socketID, ip, port);
     if (state != -1){
-        byteSend = Send(socketID, bufferRead, byteReadFile);
+        byteSend = Write(bufferRead, byteReadFile, socketID);
+        //byteSend = Send(socketID, bufferRead, byteReadFile);
         //PrintInt(byteSend);
-        byteRecv =  Receive(socketID, bufferRecv, byteSend);
+        byteRecv = Read(bufferRecv, byteSend, socketID);
+        //byteRecv =  Receive(socketID, bufferRecv, byteSend);
         //PrintInt(state);
         Close(socketID);
     }

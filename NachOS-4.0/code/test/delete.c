@@ -19,8 +19,8 @@ int main(int argc, char* argv[])
 	// fileName = argv[1];
 	RemoveFileId = Remove(fileName);
     if (RemoveFileId != -1)
-        PrintString("Da xoa file");
+        PrintString("Da xoa file\n");
     else
-        PrintString("chua xoa dc");
+        PrintString("Chua xoa duoc\n");
     Halt();
 }

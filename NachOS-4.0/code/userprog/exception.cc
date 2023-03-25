@@ -447,7 +447,7 @@ void ExceptionHandler(ExceptionType which)
 			}
 			else if (kernel->fileSystem->openf[openf_id]->getIDType() == 1)
 			{
-				cout << "sockettype" << endl;
+				// cout << "sockettype" << endl;
 				int sockID = kernel->fileSystem->openf[openf_id]->getfile();
 				char *buffer = User2System(virtAddr, len);
 
@@ -887,7 +887,7 @@ void ExceptionHandler(ExceptionType which)
 				}
 				else
 				{
-					cout << "hello" << endl;
+					//	cout << "hello" << endl;
 					DEBUG(dbgSys, "\nCannot receive");
 					kernel->machine->WriteRegister(2, -1);
 				}

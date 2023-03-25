@@ -38,8 +38,8 @@ int main(int argc, char* argv[]) {
     }
     else{
         readByte1 = Read(buf, maxlen, src1fid);
-        PrintInt(readByte1);
-        PrintString('\n');
+        //PrintInt(readByte1);
+        //PrintString('\n');
         Close(src1fid);
     }
     src2fid = Open(src2fname, 0);
@@ -50,8 +50,8 @@ int main(int argc, char* argv[]) {
     }
     else{
         readByte2 = Read(buf2, maxlen, src2fid);
-        PrintInt(readByte2);
-        PrintString('\n');
+        //PrintInt(readByte2);
+        //PrintString('\n');
         Close(src2fid);   
     }
     desfid = Open(desfname,0);
