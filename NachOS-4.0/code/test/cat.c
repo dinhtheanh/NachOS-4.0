@@ -3,12 +3,15 @@
 int main()
 {
     int len;
-    char filename[maxlen + 1];
+    
     char buf[32];
+    char filename[32];
+    int OpenFileID;
     /*Create a file*/
     int CloseStatus;
     int byteRead; // so byte thuc su doc duoc
-    int OpenFileID = Open("text.txt", 0);
+    ReadString(filename, 32);
+    OpenFileID = Open(filename, 0);
     if (OpenFileID != -1)
     {
         PrintString("Mo file thanh cong\n");
